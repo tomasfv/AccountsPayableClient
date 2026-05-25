@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import toast from 'react-hot-toast'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import { fetchUsers, registerUser } from '../store/slices/authSlice'
 
@@ -7,7 +8,6 @@ const UsersPage: React.FC = () => {
   const { users, loading, user: currentUser } = useAppSelector((s) => s.auth)
   const [showModal, setShowModal] = useState(false)
   const [form, setForm] = useState({ fullName: '', email: '', password: '', role: 'Submitter' as 'Admin' | 'Approver' | 'Submitter' })
-  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     dispatch(fetchUsers())
@@ -15,13 +15,13 @@ const UsersPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError(null)
     const result = await dispatch(registerUser(form))
     if (registerUser.fulfilled.match(result)) {
+      toast.success('User created successfully')
       setShowModal(false)
       setForm({ fullName: '', email: '', password: '', role: 'Submitter' })
     } else {
-      setError(result.payload as string || 'Registration failed')
+      toast.error((result.payload as string) || 'Registration failed')
     }
   }
 
@@ -98,11 +98,6 @@ const UsersPage: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="card w-full max-w-md relative border border-surface-border shadow-2xl">
             <h2 className="text-xl font-bold text-white mb-4">Register New User</h2>
-            {error && (
-              <div className="mb-4 p-3 rounded bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
-                {error}
-              </div>
-            )}
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="label">Full Name</label>

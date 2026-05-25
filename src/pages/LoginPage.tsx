@@ -1,21 +1,24 @@
 import React, { useState } from 'react'
+import toast from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
-import { login, clearError } from '../store/slices/authSlice'
+import { login } from '../store/slices/authSlice'
 
 const LoginPage: React.FC = () => {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
-  const { loading, error } = useAppSelector((s) => s.auth)
+  const loading = useAppSelector((s) => s.auth.loading)
 
   const [form, setForm] = useState({ email: '', password: '' })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    dispatch(clearError())
     const result = await dispatch(login(form))
     if (login.fulfilled.match(result)) {
+      toast.success('Welcome back!')
       navigate('/bills')
+    } else {
+      toast.error((result.payload as string) || 'Login failed')
     }
   }
 
@@ -40,11 +43,6 @@ const LoginPage: React.FC = () => {
         {/* Card */}
         <div className="card">
           <form onSubmit={handleSubmit} className="space-y-4">
-            {error && (
-              <div className="px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
-                {error}
-              </div>
-            )}
             <div>
               <label className="label">Email</label>
               <input

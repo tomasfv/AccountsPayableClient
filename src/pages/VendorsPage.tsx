@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import toast from 'react-hot-toast'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import { fetchVendors, createVendor } from '../store/slices/vendorsSlice'
 
@@ -16,7 +17,6 @@ const VendorsPage: React.FC = () => {
     bankRoutingNumber: '',
     bankAccountNumber: '',
   })
-  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     dispatch(fetchVendors())
@@ -24,14 +24,14 @@ const VendorsPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError(null)
     const result = await dispatch(createVendor(form))
     if (createVendor.fulfilled.match(result)) {
+      toast.success('Vendor created successfully')
       setShowModal(false)
       setForm({ name: '', email: '', phone: '', bankName: '', bankRoutingNumber: '', bankAccountNumber: '' })
       dispatch(fetchVendors())
     } else {
-      setError(result.payload as string || 'Failed to create vendor')
+      toast.error((result.payload as string) || 'Failed to create vendor')
     }
   }
 
@@ -102,11 +102,6 @@ const VendorsPage: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="card w-full max-w-md relative border border-surface-border shadow-2xl">
             <h2 className="text-xl font-bold text-white mb-4">Add New Vendor</h2>
-            {error && (
-              <div className="mb-4 p-3 rounded bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
-                {error}
-              </div>
-            )}
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="label">Vendor Name</label>

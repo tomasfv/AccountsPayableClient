@@ -2,6 +2,7 @@ import React, { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from './hooks/redux'
 import { fetchMe } from './store/slices/authSlice'
+import { Toaster } from 'react-hot-toast'
 
 import AppLayout from './layouts/AppLayout'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -27,6 +28,7 @@ const App: React.FC = () => {
 
   return (
     <BrowserRouter>
+      <Toaster position="top-center" />
       <Routes>
         {/* Public */}
         <Route path="/login" element={<LoginPage />} />
