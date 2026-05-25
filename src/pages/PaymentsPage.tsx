@@ -27,10 +27,13 @@ const PaymentsPage: React.FC = () => {
     new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 
   const statusColors: Record<string, string> = {
-    'Scheduled':  'bg-purple-500/20 text-purple-400 border border-purple-500/10',
-    'Processing': 'bg-blue-500/20 text-blue-400 border border-blue-500/10',
-    'Completed':  'bg-green-500/20 text-green-400 border border-green-500/10',
-    'Failed':     'bg-red-500/20 text-red-400 border border-red-500/10',
+    'Not Scheduled': 'bg-slate-500/20 text-slate-400 border border-slate-500/10',
+    'Scheduled':     'bg-purple-500/20 text-purple-400 border border-purple-500/10',
+    'Processing':    'bg-blue-500/20 text-blue-400 border border-blue-500/10',
+    'Paid':          'bg-green-500/20 text-green-400 border border-green-500/10',
+    'Failed':        'bg-red-500/20 text-red-400 border border-red-500/10',
+    'Cancelled':     'bg-slate-500/20 text-slate-400 border border-slate-500/10',
+    'Refunded':      'bg-cyan-500/20 text-cyan-400 border border-cyan-500/10',
   }
 
   return (

@@ -10,7 +10,7 @@ export interface Payment {
   amount: number
   scheduledDate: string
   paidDate: string | null
-  status: 'Scheduled' | 'Processing' | 'Completed' | 'Failed'
+  status: 'Not Scheduled' | 'Scheduled' | 'Processing' | 'Paid' | 'Failed' | 'Cancelled' | 'Refunded'
   transactionReference: string | null
   createdAt: string
   updatedAt: string
@@ -30,8 +30,7 @@ export interface Bill {
   amount: number
   invoiceNumber: string | null
   dueDate: string
-  status: 'Draft' | 'Pending Approval' | 'Approved' | 'Scheduled' | 'Paid'
-  actions: string[]
+  status: 'Draft' | 'Pending Approval' | 'Approved' | 'Overdue' | 'Rejected' | 'Cancelled' | 'Paid'
   vendor?: Vendor
   creator?: { id: string; fullName: string; email: string }
   approver?: { id: string; fullName: string; email: string } | null

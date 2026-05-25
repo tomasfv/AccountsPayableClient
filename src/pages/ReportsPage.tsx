@@ -17,10 +17,12 @@ const ReportsPage: React.FC = () => {
   const stats = bills.reduce(
     (acc, bill) => {
       acc.totalVolume += bill.amount
+      const lastPayment = bill.payments?.[bill.payments.length - 1]
+      const payStatus = lastPayment?.status ?? null
       if (bill.status === 'Paid') {
         acc.paidAmount += bill.amount
         acc.paidCount++
-      } else if (bill.status === 'Scheduled') {
+      } else if (bill.status === 'Approved' && (payStatus === 'Scheduled' || payStatus === 'Processing')) {
         acc.scheduledAmount += bill.amount
         acc.scheduledCount++
       } else if (bill.status === 'Pending Approval') {
