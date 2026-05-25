@@ -1,0 +1,83 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-50: #f0f4ff;
+  --color-brand-100: #e0eaff;
+  --color-brand-200: #c4d2fc;
+  --color-brand-300: #9ab3fa;
+  --color-brand-400: #6d8ef6;
+  --color-brand-500: #4f6ef1;
+  --color-brand-600: #3651e5;
+  --color-brand-700: #2c40ca;
+  --color-brand-800: #2836a4;
+  --color-brand-900: #263281;
+  --color-brand-950: #1a1f52;
+
+  --color-surface: #0f1117;
+  --color-surface-card: #161b27;
+  --color-surface-border: #1e2534;
+  --color-surface-hover: #1c2235;
+
+  --font-sans: 'Inter', system-ui, sans-serif;
+}
+
+@layer base {
+  html {
+    @apply bg-surface text-slate-100 antialiased;
+  }
+
+  * {
+    @apply border-surface-border;
+  }
+
+  ::-webkit-scrollbar {
+    @apply w-1.5;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-surface;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-surface-border rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-brand-700;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-600 hover:bg-brand-500 text-white font-medium text-sm transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-card border border-surface-border hover:bg-surface-hover text-slate-300 font-medium text-sm transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+
+  .btn-danger {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-600/20 font-medium text-sm transition-all duration-200;
+  }
+
+  .card {
+    @apply bg-surface-card border border-surface-border rounded-xl p-6;
+  }
+
+  .input {
+    @apply w-full px-3 py-2 rounded-lg bg-surface border border-surface-border text-slate-100 placeholder-slate-500 text-sm focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500 transition-colors;
+  }
+
+  .label {
+    @apply block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wide;
+  }
+
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold;
+  }
+
+  .table-header {
+    @apply px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider;
+  }
+
+  .table-cell {
+    @apply px-4 py-4 text-sm text-slate-300;
+  }
+}
