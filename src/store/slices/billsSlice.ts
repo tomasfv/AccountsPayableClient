@@ -112,9 +112,10 @@ export const schedulePayment = createAsyncThunk(
 
 export const executePayment = createAsyncThunk(
   'bills/executePayment',
-  async (id: string, { rejectWithValue }) => {
+  async (payload: { id: string; paymentMethod?: string }, { rejectWithValue }) => {
     try {
-      const { data } = await api.post(`/bills/${id}/pay`)
+      const { id, ...body } = payload
+      const { data } = await api.post(`/bills/${id}/pay`, body)
       return data.data.bill as Bill
     } catch (err: unknown) {
       return rejectWithValue(isAxiosError(err) ? err.response?.data?.message || 'Failed to execute payment' : 'Failed to execute payment')

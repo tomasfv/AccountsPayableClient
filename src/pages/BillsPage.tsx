@@ -148,6 +148,7 @@ const BillsPage: React.FC = () => {
   // State for modals
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [showPayNowModal, setShowPayNowModal] = useState(false);
   const [selectedBillId, setSelectedBillId] = useState<string | null>(null);
 
   // Form states
@@ -161,10 +162,15 @@ const BillsPage: React.FC = () => {
     paymentMethod: "ACH" as "ACH" | "Paper Check" | "Card",
     scheduledDate: "",
   });
+  const [payNowForm, setPayNowForm] = useState({
+    paymentMethod: "ACH" as "ACH" | "Paper Check" | "Card",
+  });
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("All");
   const [openMenuBillId, setOpenMenuBillId] = useState<string | null>(null);
-  const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null);
+  const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(
+    null,
+  );
 
   useEffect(() => {
     dispatch(fetchBills());
@@ -258,15 +264,38 @@ const BillsPage: React.FC = () => {
     }
   };
 
-  const handleExecutePayment = async (id: string) => {
+  const handleExecutePayment = async (id: string, paymentMethod?: string) => {
     if (window.confirm("Are you sure you want to execute this payment now?")) {
       setError(null);
-      const result = await dispatch(executePayment(id));
+      const result = await dispatch(executePayment({ id, paymentMethod }));
       if (executePayment.fulfilled.match(result)) {
         await dispatch(fetchBills());
       } else {
-        setError((result.payload as string) || "Failed to execute payment");
+        setError(
+          (result.payload as string) || "Failed to execute payment",
+        );
       }
+    }
+  };
+
+  const handlePayNowSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedBillId) return;
+    setError(null);
+    const result = await dispatch(
+      executePayment({
+        id: selectedBillId,
+        paymentMethod: payNowForm.paymentMethod,
+      }),
+    );
+    if (executePayment.fulfilled.match(result)) {
+      setShowPayNowModal(false);
+      setSelectedBillId(null);
+      await dispatch(fetchBills());
+    } else {
+      setError(
+        (result.payload as string) || "Failed to execute payment",
+      );
     }
   };
 
@@ -283,6 +312,15 @@ const BillsPage: React.FC = () => {
         break;
       case "SUBMIT":
       case "REJECT":
+        if (window.confirm("Are you sure to reject this bill?")) {
+          setError("Reject bill is not yet implemented");
+        }
+        break;
+      case "PAY_NOW":
+        setSelectedBillId(billId);
+        setPayNowForm({ paymentMethod: "ACH" });
+        setShowPayNowModal(true);
+        break;
       case "VIEW_DETAILS":
       case "DOWNLOAD_PDF":
       case "RESCHEDULE":
@@ -575,8 +613,7 @@ const BillsPage: React.FC = () => {
                                       </svg>
                                     </button>
 
-                                    {openMenuBillId === bill.id &&
-                                      menuPos && (
+                                    {openMenuBillId === bill.id && menuPos && (
                                       <>
                                         <div
                                           className="fixed inset-0 z-40"
@@ -774,6 +811,57 @@ const BillsPage: React.FC = () => {
                 </button>
                 <button type="submit" className="btn-primary">
                   Confirm Schedule
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Pay Now Modal */}
+      {showPayNowModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="card w-full max-w-md relative border border-surface-border shadow-2xl">
+            <h2 className="text-xl font-bold text-white mb-4">
+              Pay Now
+            </h2>
+            {error && (
+              <div className="mb-4 p-3 rounded bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+                {error}
+              </div>
+            )}
+            <form onSubmit={handlePayNowSubmit} className="space-y-4">
+              <div>
+                <label className="label">Payment Method</label>
+                <select
+                  required
+                  className="input select"
+                  value={payNowForm.paymentMethod}
+                  onChange={(e) =>
+                    setPayNowForm({
+                      ...payNowForm,
+                      paymentMethod: e.target.value as
+                        | "ACH"
+                        | "Paper Check"
+                        | "Card",
+                    })
+                  }
+                >
+                  <option value="ACH">ACH (Direct Deposit)</option>
+                  <option value="Card">Credit Card</option>
+                  <option value="Paper Check">Paper Check</option>
+                </select>
+              </div>
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-surface-border">
+                <button
+                  type="button"
+                  onClick={() => setShowPayNowModal(false)}
+                  className="btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn-primary">
+                  Confirm Payment
                 </button>
               </div>
             </form>
