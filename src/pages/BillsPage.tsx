@@ -6,9 +6,13 @@ import {
   fetchBills,
   createBill,
   approveBill,
+  rejectBill,
+  updateBill,
+  deleteBill,
   schedulePayment,
   executePayment,
 } from "../store/slices/billsSlice";
+import type { Bill } from "../store/slices/billsSlice";
 import { fetchVendors } from "../store/slices/vendorsSlice";
 
 type BillAction =
@@ -35,18 +39,6 @@ type BillAction =
   | "EDIT_RESUBMIT"
   | "VIEW_REJECTION_REASON";
 
-const primaryActions: BillAction[] = [
-  "SUBMIT",
-  "APPROVE",
-  "SCHEDULE",
-  "PAY_NOW",
-  "VIEW_PAYMENT",
-  "VIEW_RECEIPT",
-  "RESOLVE_PAYMENT",
-  "EDIT_RESUBMIT",
-  "DUPLICATE_BILL",
-  "REVIEW_REFUND",
-];
 function getActions(
   billStatus: string,
   paymentStatus: string | null,
@@ -110,7 +102,7 @@ function getActions(
     case "Rejected":
       return {
         primary: "EDIT_RESUBMIT",
-        secondary: ["VIEW_REJECTION_REASON", "DELETE", "VIEW_DETAILS"],
+        secondary: ["DELETE", "VIEW_DETAILS"],
       };
     case "Cancelled":
       return { primary: "DUPLICATE_BILL", secondary: ["VIEW_DETAILS"] };
@@ -168,6 +160,20 @@ const BillsPage: React.FC = () => {
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editBillId, setEditBillId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({
+    vendorId: "",
+    amount: "",
+    invoiceNumber: "",
+    dueDate: "",
+  });
+  const [editFile, setEditFile] = useState<File | null>(null);
+  const [editFilePreview, setEditFilePreview] = useState<string | null>(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [selectedDetailBill, setSelectedDetailBill] = useState<Bill | null>(
+    null,
+  );
   const [statusFilter, setStatusFilter] = useState<string>("All");
   const [openMenuBillId, setOpenMenuBillId] = useState<string | null>(null);
   const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(
@@ -225,6 +231,76 @@ const BillsPage: React.FC = () => {
     } else {
       toast.error((result.payload as string) || "Failed to create bill");
     }
+  };
+
+  const handleReject = async (id: string) => {
+    if (await confirmToast("Are you sure you want to reject this bill?")) {
+      const result = await dispatch(rejectBill(id));
+      if (rejectBill.fulfilled.match(result)) {
+        toast.success("Bill rejected successfully");
+        await dispatch(fetchBills());
+      } else {
+        toast.error((result.payload as string) || "Failed to reject bill");
+      }
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (await confirmToast("Delete this bill permanently?")) {
+      const result = await dispatch(deleteBill(id));
+      if (deleteBill.fulfilled.match(result)) {
+        toast.success("Bill deleted successfully");
+        await dispatch(fetchBills());
+      } else {
+        toast.error((result.payload as string) || "Failed to delete bill");
+      }
+    }
+  };
+
+  const handleOpenEdit = (bill: Bill) => {
+    setEditBillId(bill.id);
+    setEditForm({
+      vendorId: bill.vendorId,
+      amount: String(bill.amount),
+      invoiceNumber: bill.invoiceNumber || "",
+      dueDate: bill.dueDate
+        ? new Date(bill.dueDate).toISOString().split("T")[0]
+        : "",
+    });
+    setEditFile(null);
+    setEditFilePreview(null);
+    setShowEditModal(true);
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editBillId) return;
+    const result = await dispatch(
+      updateBill({
+        id: editBillId,
+        vendorId: editForm.vendorId,
+        amount: parseFloat(editForm.amount),
+        invoiceNumber: editForm.invoiceNumber || undefined,
+        dueDate: editForm.dueDate,
+        file: editFile || undefined,
+      }),
+    );
+    if (updateBill.fulfilled.match(result)) {
+      toast.success("Bill updated successfully");
+      setShowEditModal(false);
+      setEditBillId(null);
+      if (editFilePreview) URL.revokeObjectURL(editFilePreview);
+      setEditFile(null);
+      setEditFilePreview(null);
+      await dispatch(fetchBills());
+    } else {
+      toast.error((result.payload as string) || "Failed to update bill");
+    }
+  };
+
+  const handleOpenDetails = (bill: Bill) => {
+    setSelectedDetailBill(bill);
+    setShowDetailsModal(true);
   };
 
   const handleApprove = async (id: string) => {
@@ -307,23 +383,25 @@ const BillsPage: React.FC = () => {
     toast.error("Feature not yet implemented");
   };
 
-  const handleSecondaryAction = async (billId: string, action: BillAction) => {
+  const handleSecondaryAction = async (
+    billId: string,
+    action: BillAction,
+    bill?: Bill,
+  ) => {
     setOpenMenuBillId(null);
     setMenuPos(null);
     switch (action) {
       case "EDIT":
-        toast.error("Edit bill not yet implemented");
+        if (bill) handleOpenEdit(bill);
         break;
       case "DELETE":
-        if (await confirmToast("Delete this bill permanently?")) {
-          toast.error("Delete bill not yet implemented");
-        }
+        await handleDelete(billId);
         break;
       case "SUBMIT":
+        handleNotImplemented();
+        break;
       case "REJECT":
-        if (await confirmToast("Are you sure to reject this bill?")) {
-          toast.error("Reject bill is not yet implemented");
-        }
+        await handleReject(billId);
         break;
       case "PAY_NOW":
         setSelectedBillId(billId);
@@ -331,6 +409,8 @@ const BillsPage: React.FC = () => {
         setShowPayNowModal(true);
         break;
       case "VIEW_DETAILS":
+        if (bill) handleOpenDetails(bill);
+        break;
       case "DOWNLOAD_PDF":
       case "RESCHEDULE":
       case "CANCEL_PAYMENT":
@@ -340,7 +420,7 @@ const BillsPage: React.FC = () => {
       case "CHANGE_PAYMENT_METHOD":
       case "VIEW_PAYMENT_HISTORY":
       case "VIEW_REJECTION_REASON":
-        toast.error(`"${actionLabel[action]}" not yet implemented`);
+        handleNotImplemented();
         break;
     }
   };
@@ -558,11 +638,15 @@ const BillsPage: React.FC = () => {
                                           case "VIEW_RECEIPT":
                                             handleNotImplemented();
                                             break;
+                                          case "EDIT_RESUBMIT":
+                                            handleOpenEdit(bill);
+                                            break;
                                           default:
                                             if (actions.primary) {
                                               handleSecondaryAction(
                                                 bill.id,
                                                 actions.primary,
+                                                bill,
                                               );
                                             }
                                         }
@@ -642,6 +726,7 @@ const BillsPage: React.FC = () => {
                                                 handleSecondaryAction(
                                                   bill.id,
                                                   action,
+                                                  bill,
                                                 )
                                               }
                                               className="w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-surface-hover hover:text-white transition-colors"
@@ -931,6 +1016,254 @@ const BillsPage: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Bill Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="card w-full max-w-7xl relative border border-surface-border shadow-2xl">
+            <h2 className="text-xl font-bold text-white mb-4">
+              Edit Invoice / Bill
+            </h2>
+            <form onSubmit={handleEditSubmit}>
+              <div className="flex gap-6">
+                {/* Left: PDF Upload / Preview */}
+                <div className="w-1/2 min-h-[700px]">
+                  {!editFilePreview && !editFile ? (
+                    <label className="flex flex-col items-center justify-center w-full h-full min-h-[700px] rounded-xl border-2 border-dashed border-surface-border bg-surface-hover/30 cursor-pointer hover:border-brand-500/50 transition-colors">
+                      <svg
+                        className="w-10 h-10 text-slate-500 mb-3"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={1.5}
+                          d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                        />
+                      </svg>
+                      <p className="text-sm text-slate-400 font-medium">
+                        Drop PDF here or click to browse
+                      </p>
+                      <p className="text-xs text-slate-600 mt-1">
+                        PDF files up to 10MB
+                      </p>
+                      <input
+                        type="file"
+                        accept=".pdf"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            if (file.size > 10 * 1024 * 1024) {
+                              toast.error("File exceeds 10MB limit");
+                              return;
+                            }
+                            setEditFile(file);
+                            setEditFilePreview(URL.createObjectURL(file));
+                          }
+                        }}
+                      />
+                    </label>
+                  ) : (
+                    <div className="relative w-full min-h-[700px] rounded-xl overflow-hidden border border-surface-border bg-black/20">
+                      <embed
+                        src={editFilePreview || ""}
+                        type="application/pdf"
+                        className="w-full h-full min-h-[700px]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (editFilePreview)
+                            URL.revokeObjectURL(editFilePreview);
+                          setEditFile(null);
+                          setEditFilePreview(null);
+                        }}
+                        className="absolute top-2 right-2 px-2.5 py-1 rounded-lg bg-red-600/80 hover:bg-red-600 text-white text-xs font-medium transition-colors"
+                      >
+                        Remove file
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Right: Form */}
+                <div className="w-1/2 space-y-4">
+                  <div>
+                    <label className="label">Vendor</label>
+                    <select
+                      required
+                      className="input select"
+                      value={editForm.vendorId}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, vendorId: e.target.value })
+                      }
+                    >
+                      <option value="">Select Vendor...</option>
+                      {vendors.map((v) => (
+                        <option key={v.id} value={v.id}>
+                          {v.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label">Amount (USD)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      required
+                      className="input"
+                      placeholder="0.00"
+                      value={editForm.amount}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, amount: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label className="label">Invoice Number</label>
+                    <input
+                      type="text"
+                      className="input"
+                      placeholder="INV-2026-XXXX"
+                      value={editForm.invoiceNumber}
+                      onChange={(e) =>
+                        setEditForm({
+                          ...editForm,
+                          invoiceNumber: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label className="label">Due Date</label>
+                    <input
+                      type="date"
+                      required
+                      className="input"
+                      value={editForm.dueDate}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, dueDate: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="flex items-center justify-end gap-3 pt-4 border-t border-surface-border">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (editFilePreview)
+                          URL.revokeObjectURL(editFilePreview);
+                        setEditFile(null);
+                        setEditFilePreview(null);
+                        setShowEditModal(false);
+                        setEditBillId(null);
+                      }}
+                      className="btn-secondary"
+                    >
+                      Cancel
+                    </button>
+                    <button type="submit" className="btn-primary">
+                      Save Changes
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* View Details Modal */}
+      {showDetailsModal && selectedDetailBill && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="card w-full max-w-7xl relative border border-surface-border shadow-2xl">
+            <h2 className="text-xl font-bold text-white mb-4">Bill Details</h2>
+            <div className="flex gap-6">
+              {/* Left: PDF Viewer */}
+              <div className="w-1/2 min-h-[700px] rounded-xl overflow-hidden border border-surface-border bg-black/20">
+                {selectedDetailBill.fileUrl ? (
+                  <embed
+                    src={selectedDetailBill.fileUrl}
+                    type="application/pdf"
+                    className="w-full h-full min-h-[700px]"
+                  />
+                ) : (
+                  <div className="flex items-center justify-center w-full h-full min-h-[700px] text-slate-500 text-sm">
+                    No PDF attached
+                  </div>
+                )}
+              </div>
+
+              {/* Right: Read-only Details */}
+              <div className="w-1/2 space-y-4">
+                <div>
+                  <label className="label">Vendor</label>
+                  <p className="text-sm text-white font-medium">
+                    {selectedDetailBill.vendor?.name ||
+                      selectedDetailBill.vendorId ||
+                      "—"}
+                  </p>
+                </div>
+                <div>
+                  <label className="label">Amount (USD)</label>
+                  <p className="text-sm text-white font-medium">
+                    {formatCurrency(selectedDetailBill.amount)}
+                  </p>
+                </div>
+                <div>
+                  <label className="label">Invoice Number</label>
+                  <p className="text-sm text-white font-medium">
+                    {selectedDetailBill.invoiceNumber || "—"}
+                  </p>
+                </div>
+                <div>
+                  <label className="label">Due Date</label>
+                  <p className="text-sm text-white font-medium">
+                    {formatDate(selectedDetailBill.dueDate)}
+                  </p>
+                </div>
+                <div>
+                  <label className="label">Status</label>
+                  <span
+                    className={`badge ${statusColors[selectedDetailBill.status] ?? ""}`}
+                  >
+                    {selectedDetailBill.status}
+                  </span>
+                </div>
+                <div>
+                  <label className="label">Created By</label>
+                  <p className="text-sm text-white font-medium">
+                    {selectedDetailBill.creator?.fullName || "—"}
+                  </p>
+                </div>
+                {selectedDetailBill.approver && (
+                  <div>
+                    <label className="label">Approved By</label>
+                    <p className="text-sm text-white font-medium">
+                      {selectedDetailBill.approver.fullName}
+                    </p>
+                  </div>
+                )}
+                <div className="flex items-center justify-end gap-3 pt-4 border-t border-surface-border">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowDetailsModal(false);
+                      setSelectedDetailBill(null);
+                    }}
+                    className="btn-secondary"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

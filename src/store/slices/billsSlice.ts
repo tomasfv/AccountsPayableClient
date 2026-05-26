@@ -136,6 +136,55 @@ export const executePayment = createAsyncThunk(
   }
 )
 
+export const rejectBill = createAsyncThunk(
+  'bills/reject',
+  async (id: string, { rejectWithValue }) => {
+    try {
+      const { data } = await api.post(`/bills/${id}/reject`)
+      return data.data as Bill
+    } catch (err: unknown) {
+      return rejectWithValue(isAxiosError(err) ? err.response?.data?.message || 'Failed to reject bill' : 'Failed to reject bill')
+    }
+  }
+)
+
+export const updateBill = createAsyncThunk(
+  'bills/update',
+  async (payload: { id: string; vendorId?: string; amount?: number; invoiceNumber?: string; dueDate?: string; file?: File }, { rejectWithValue }) => {
+    try {
+      let body
+      if (payload.file) {
+        const formData = new FormData()
+        if (payload.vendorId !== undefined) formData.append('vendorId', payload.vendorId)
+        if (payload.amount !== undefined) formData.append('amount', String(payload.amount))
+        if (payload.invoiceNumber !== undefined) formData.append('invoiceNumber', payload.invoiceNumber)
+        if (payload.dueDate !== undefined) formData.append('dueDate', payload.dueDate)
+        formData.append('file', payload.file)
+        body = formData
+      } else {
+        const { id, ...rest } = payload
+        body = rest
+      }
+      const { data } = await api.put(`/bills/${payload.id}`, body)
+      return data.data as Bill
+    } catch (err: unknown) {
+      return rejectWithValue(isAxiosError(err) ? err.response?.data?.message || 'Failed to update bill' : 'Failed to update bill')
+    }
+  }
+)
+
+export const deleteBill = createAsyncThunk(
+  'bills/delete',
+  async (id: string, { rejectWithValue }) => {
+    try {
+      await api.delete(`/bills/${id}`)
+      return id
+    } catch (err: unknown) {
+      return rejectWithValue(isAxiosError(err) ? err.response?.data?.message || 'Failed to delete bill' : 'Failed to delete bill')
+    }
+  }
+)
+
 // --- Initial State ---
 const initialState: BillsState = {
   items: [],
@@ -226,6 +275,33 @@ const billsSlice = createSlice({
         }
         if (state.selected?.id === action.payload.id) {
           state.selected = { ...state.selected, ...action.payload }
+        }
+      })
+      // Reject
+      .addCase(rejectBill.fulfilled, (state, action: PayloadAction<Bill>) => {
+        const idx = state.items.findIndex((b) => b.id === action.payload.id)
+        if (idx >= 0) {
+          state.items[idx] = { ...state.items[idx], ...action.payload }
+        }
+        if (state.selected?.id === action.payload.id) {
+          state.selected = { ...state.selected, ...action.payload }
+        }
+      })
+      // Update
+      .addCase(updateBill.fulfilled, (state, action: PayloadAction<Bill>) => {
+        const idx = state.items.findIndex((b) => b.id === action.payload.id)
+        if (idx >= 0) {
+          state.items[idx] = { ...state.items[idx], ...action.payload }
+        }
+        if (state.selected?.id === action.payload.id) {
+          state.selected = { ...state.selected, ...action.payload }
+        }
+      })
+      // Delete
+      .addCase(deleteBill.fulfilled, (state, action: PayloadAction<string>) => {
+        state.items = state.items.filter((b) => b.id !== action.payload)
+        if (state.selected?.id === action.payload) {
+          state.selected = null
         }
       })
   },
