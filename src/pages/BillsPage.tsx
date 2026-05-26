@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useAppDispatch, useAppSelector } from "../hooks/redux";
+import { confirmToast } from "../utils/confirmToast";
 import {
   fetchBills,
   createBill,
@@ -195,7 +196,7 @@ const BillsPage: React.FC = () => {
     e.preventDefault();
     if (!createForm.vendorId) {
       toast.error("Please select a vendor");
-      return
+      return;
     }
     const result = await dispatch(
       createBill({
@@ -216,22 +217,18 @@ const BillsPage: React.FC = () => {
       });
       dispatch(fetchBills());
     } else {
-      toast.error(
-        (result.payload as string) || "Failed to create bill",
-      );
+      toast.error((result.payload as string) || "Failed to create bill");
     }
   };
 
   const handleApprove = async (id: string) => {
-    if (window.confirm("Are you sure you want to approve this bill?")) {
+    if (await confirmToast("Are you sure you want to approve this bill?")) {
       const result = await dispatch(approveBill(id));
       if (approveBill.fulfilled.match(result)) {
         toast.success("Bill approved successfully");
         await dispatch(fetchBills());
       } else {
-        toast.error(
-          (result.payload as string) || "Failed to approve bill",
-        );
+        toast.error((result.payload as string) || "Failed to approve bill");
       }
     }
   };
@@ -263,22 +260,20 @@ const BillsPage: React.FC = () => {
       setSelectedBillId(null);
       await dispatch(fetchBills());
     } else {
-      toast.error(
-        (result.payload as string) || "Failed to schedule payment",
-      );
+      toast.error((result.payload as string) || "Failed to schedule payment");
     }
   };
 
   const handleExecutePayment = async (id: string, paymentMethod?: string) => {
-    if (window.confirm("Are you sure you want to execute this payment now?")) {
+    if (
+      await confirmToast("Are you sure you want to execute this payment now?")
+    ) {
       const result = await dispatch(executePayment({ id, paymentMethod }));
       if (executePayment.fulfilled.match(result)) {
         toast.success("Payment executed successfully");
         await dispatch(fetchBills());
       } else {
-        toast.error(
-          (result.payload as string) || "Failed to execute payment",
-        );
+        toast.error((result.payload as string) || "Failed to execute payment");
       }
     }
   };
@@ -298,10 +293,12 @@ const BillsPage: React.FC = () => {
       setSelectedBillId(null);
       await dispatch(fetchBills());
     } else {
-      toast.error(
-        (result.payload as string) || "Failed to execute payment",
-      );
+      toast.error((result.payload as string) || "Failed to execute payment");
     }
+  };
+
+  const handleNotImplemented = () => {
+    toast.error("Feature not yet implemented");
   };
 
   const handleSecondaryAction = async (billId: string, action: BillAction) => {
@@ -312,15 +309,20 @@ const BillsPage: React.FC = () => {
         toast.error("Edit bill not yet implemented");
         break;
       case "DELETE":
-        if (window.confirm("Delete this bill permanently?")) {
+        if (await confirmToast("Delete this bill permanently?")) {
           toast.error("Delete bill not yet implemented");
         }
         break;
       case "SUBMIT":
       case "REJECT":
-        if (window.confirm("Are you sure to reject this bill?")) {
+        if (await confirmToast("Are you sure to reject this bill?")) {
           toast.error("Reject bill is not yet implemented");
         }
+        break;
+      case "PAY_NOW":
+        setSelectedBillId(billId);
+        setPayNowForm({ paymentMethod: "ACH" });
+        setShowPayNowModal(true);
         break;
       case "VIEW_DETAILS":
       case "DOWNLOAD_PDF":
@@ -546,6 +548,9 @@ const BillsPage: React.FC = () => {
                                           case "PAY_NOW":
                                           case "RESOLVE_PAYMENT":
                                             handleExecutePayment(bill.id);
+                                            break;
+                                          case "VIEW_RECEIPT":
+                                            handleNotImplemented();
                                             break;
                                           default:
                                             if (actions.primary) {
@@ -806,9 +811,7 @@ const BillsPage: React.FC = () => {
       {showPayNowModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="card w-full max-w-md relative border border-surface-border shadow-2xl">
-            <h2 className="text-xl font-bold text-white mb-4">
-              Pay Now
-            </h2>
+            <h2 className="text-xl font-bold text-white mb-4">Pay Now</h2>
             <form onSubmit={handlePayNowSubmit} className="space-y-4">
               <div>
                 <label className="label">Payment Method</label>
