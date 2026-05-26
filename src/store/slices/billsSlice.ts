@@ -123,6 +123,19 @@ export const schedulePayment = createAsyncThunk(
   }
 )
 
+export const reschedulePayment = createAsyncThunk(
+  'bills/reschedulePayment',
+  async (payload: { id: string; paymentMethod?: string; scheduledDate?: string }, { rejectWithValue }) => {
+    try {
+      const { id, ...body } = payload
+      const { data } = await api.post(`/bills/${id}/reschedule`, body)
+      return data.data.bill as Bill
+    } catch (err: unknown) {
+      return rejectWithValue(isAxiosError(err) ? err.response?.data?.message || 'Failed to reschedule payment' : 'Failed to reschedule payment')
+    }
+  }
+)
+
 export const executePayment = createAsyncThunk(
   'bills/executePayment',
   async (payload: { id: string; paymentMethod?: string }, { rejectWithValue }) => {
@@ -269,6 +282,15 @@ const billsSlice = createSlice({
         }
       })
       .addCase(executePayment.fulfilled, (state, action: PayloadAction<Bill>) => {
+        const idx = state.items.findIndex((b) => b.id === action.payload.id)
+        if (idx >= 0) {
+          state.items[idx] = { ...state.items[idx], ...action.payload }
+        }
+        if (state.selected?.id === action.payload.id) {
+          state.selected = { ...state.selected, ...action.payload }
+        }
+      })
+      .addCase(reschedulePayment.fulfilled, (state, action: PayloadAction<Bill>) => {
         const idx = state.items.findIndex((b) => b.id === action.payload.id)
         if (idx >= 0) {
           state.items[idx] = { ...state.items[idx], ...action.payload }

@@ -65,6 +65,11 @@
     @apply w-full px-3 py-2 rounded-lg bg-surface border border-surface-border text-slate-100 placeholder-slate-500 text-sm focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500 transition-colors;
   }
 
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    cursor: pointer;
+  }
+
   .label {
     @apply block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wide;
   }

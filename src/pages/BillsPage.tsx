@@ -10,6 +10,7 @@ import {
   updateBill,
   deleteBill,
   schedulePayment,
+  reschedulePayment,
   executePayment,
 } from "../store/slices/billsSlice";
 import type { Bill } from "../store/slices/billsSlice";
@@ -47,7 +48,7 @@ function getActions(
     case "Draft":
       return {
         primary: "SUBMIT",
-        secondary: ["EDIT", "DELETE", "VIEW_DETAILS"],
+        secondary: ["EDIT", "DELETE", "VIEW_DETAILS", "DOWNLOAD_PDF"],
       };
     case "Pending Approval":
       return {
@@ -60,17 +61,17 @@ function getActions(
         case "Not Scheduled":
           return {
             primary: "SCHEDULE",
-            secondary: ["PAY_NOW", "EDIT", "VIEW_DETAILS"],
+            secondary: ["PAY_NOW", "EDIT", "VIEW_DETAILS", "DOWNLOAD_PDF"],
           };
         case "Scheduled":
           return {
             primary: "PAY_NOW",
-            secondary: ["RESCHEDULE", "CANCEL_PAYMENT", "VIEW_DETAILS"],
+            secondary: ["RESCHEDULE", "CANCEL_PAYMENT", "VIEW_DETAILS", "DOWNLOAD_PDF"],
           };
         case "Processing":
           return {
             primary: "VIEW_PAYMENT",
-            secondary: ["VIEW_DETAILS", "CONTACT_VENDOR"],
+            secondary: ["VIEW_DETAILS", "CONTACT_VENDOR", "DOWNLOAD_PDF"],
           };
         case "Failed":
           return {
@@ -84,28 +85,28 @@ function getActions(
         case "Refunded":
           return {
             primary: "REVIEW_REFUND",
-            secondary: ["VIEW_PAYMENT_HISTORY", "VIEW_DETAILS"],
+            secondary: ["VIEW_PAYMENT_HISTORY", "VIEW_DETAILS", "DOWNLOAD_PDF"],
           };
         default:
-          return { primary: null, secondary: ["VIEW_DETAILS"] };
+          return { primary: null, secondary: ["VIEW_DETAILS", "DOWNLOAD_PDF"] };
       }
     case "Paid":
       return {
         primary: "VIEW_RECEIPT",
-        secondary: ["DOWNLOAD_RECEIPT", "DUPLICATE_BILL", "VIEW_DETAILS"],
+        secondary: ["DOWNLOAD_RECEIPT", "DUPLICATE_BILL", "VIEW_DETAILS", "DOWNLOAD_PDF"],
       };
     case "Overdue":
       return {
         primary: "RESOLVE_PAYMENT",
-        secondary: ["PAY_NOW", "CONTACT_VENDOR", "VIEW_DETAILS"],
+        secondary: ["PAY_NOW", "CONTACT_VENDOR", "VIEW_DETAILS", "DOWNLOAD_PDF"],
       };
     case "Rejected":
       return {
         primary: "EDIT_RESUBMIT",
-        secondary: ["DELETE", "VIEW_DETAILS"],
+        secondary: ["DELETE", "VIEW_DETAILS", "DOWNLOAD_PDF"],
       };
     case "Cancelled":
-      return { primary: "DUPLICATE_BILL", secondary: ["VIEW_DETAILS"] };
+      return { primary: "DUPLICATE_BILL", secondary: ["VIEW_DETAILS", "DOWNLOAD_PDF"] };
     default:
       return { primary: null, secondary: ["VIEW_DETAILS"] };
   }
@@ -141,6 +142,7 @@ const BillsPage: React.FC = () => {
   // State for modals
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [showRescheduleModal, setShowRescheduleModal] = useState(false);
   const [showPayNowModal, setShowPayNowModal] = useState(false);
   const [selectedBillId, setSelectedBillId] = useState<string | null>(null);
 
@@ -152,6 +154,10 @@ const BillsPage: React.FC = () => {
     dueDate: "",
   });
   const [scheduleForm, setScheduleForm] = useState({
+    paymentMethod: "ACH" as "ACH" | "Paper Check" | "Card",
+    scheduledDate: "",
+  });
+  const [rescheduleForm, setRescheduleForm] = useState({
     paymentMethod: "ACH" as "ACH" | "Paper Check" | "Card",
     scheduledDate: "",
   });
@@ -346,6 +352,26 @@ const BillsPage: React.FC = () => {
     }
   };
 
+  const handleReschedulePayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedBillId) return;
+    const result = await dispatch(
+      reschedulePayment({
+        id: selectedBillId,
+        paymentMethod: rescheduleForm.paymentMethod,
+        scheduledDate: rescheduleForm.scheduledDate,
+      }),
+    );
+    if (reschedulePayment.fulfilled.match(result)) {
+      toast.success("Payment rescheduled successfully");
+      setShowRescheduleModal(false);
+      setSelectedBillId(null);
+      await dispatch(fetchBills());
+    } else {
+      toast.error((result.payload as string) || "Failed to reschedule payment");
+    }
+  };
+
   const handleExecutePayment = async (id: string, paymentMethod?: string) => {
     if (
       await confirmToast("Are you sure you want to execute this payment now?")
@@ -411,8 +437,25 @@ const BillsPage: React.FC = () => {
       case "VIEW_DETAILS":
         if (bill) handleOpenDetails(bill);
         break;
-      case "DOWNLOAD_PDF":
+      case "DOWNLOAD_PDF": {
+        if (!bill?.fileUrl) {
+          toast.error("No PDF file submitted to this bill");
+          break;
+        }
+        const a = document.createElement("a");
+        a.href = bill.fileUrl;
+        a.download = bill.fileUrl.split("/").pop() || "bill.pdf";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        toast.success("Downloading PDF...");
+        break;
+      }
       case "RESCHEDULE":
+        setSelectedBillId(billId);
+        setRescheduleForm({ paymentMethod: "ACH", scheduledDate: "" });
+        setShowRescheduleModal(true);
+        break;
       case "CANCEL_PAYMENT":
       case "CONTACT_VENDOR":
       case "DOWNLOAD_RECEIPT":
@@ -969,6 +1012,67 @@ const BillsPage: React.FC = () => {
                 </button>
                 <button type="submit" className="btn-primary">
                   Confirm Schedule
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Reschedule Modal */}
+      {showRescheduleModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="card w-full max-w-md relative border border-surface-border shadow-2xl">
+            <h2 className="text-xl font-bold text-white mb-4">
+              Reschedule Payment
+            </h2>
+            <form onSubmit={handleReschedulePayment} className="space-y-4">
+              <div>
+                <label className="label">Payment Method</label>
+                <select
+                  required
+                  className="input select"
+                  value={rescheduleForm.paymentMethod}
+                  onChange={(e) =>
+                    setRescheduleForm({
+                      ...rescheduleForm,
+                      paymentMethod: e.target.value as
+                        | "ACH"
+                        | "Paper Check"
+                        | "Card",
+                    })
+                  }
+                >
+                  <option value="ACH">ACH (Direct Deposit)</option>
+                  <option value="Card">Credit Card</option>
+                  <option value="Paper Check">Paper Check</option>
+                </select>
+              </div>
+              <div>
+                <label className="label">Payment Date</label>
+                <input
+                  type="date"
+                  required
+                  className="input"
+                  value={rescheduleForm.scheduledDate}
+                  onChange={(e) =>
+                    setRescheduleForm({
+                      ...rescheduleForm,
+                      scheduledDate: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-surface-border">
+                <button
+                  type="button"
+                  onClick={() => setShowRescheduleModal(false)}
+                  className="btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn-primary">
+                  Confirm Reschedule
                 </button>
               </div>
             </form>
