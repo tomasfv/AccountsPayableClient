@@ -166,6 +166,8 @@ const BillsPage: React.FC = () => {
   const [payNowForm, setPayNowForm] = useState({
     paymentMethod: "ACH" as "ACH" | "Paper Check" | "Card",
   });
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [filePreview, setFilePreview] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("All");
   const [openMenuBillId, setOpenMenuBillId] = useState<string | null>(null);
   const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(
@@ -204,6 +206,7 @@ const BillsPage: React.FC = () => {
         amount: parseFloat(createForm.amount),
         invoiceNumber: createForm.invoiceNumber || undefined,
         dueDate: createForm.dueDate,
+        file: selectedFile || undefined,
       }),
     );
     if (createBill.fulfilled.match(result)) {
@@ -215,6 +218,9 @@ const BillsPage: React.FC = () => {
         invoiceNumber: "",
         dueDate: "",
       });
+      if (filePreview) URL.revokeObjectURL(filePreview);
+      setSelectedFile(null);
+      setFilePreview(null);
       dispatch(fetchBills());
     } else {
       toast.error((result.payload as string) || "Failed to create bill");
@@ -665,81 +671,159 @@ const BillsPage: React.FC = () => {
       {/* Create Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="card w-full max-w-md relative border border-surface-border shadow-2xl">
+          <div className="card w-full max-w-7xl relative border border-surface-border shadow-2xl">
             <h2 className="text-xl font-bold text-white mb-4">
               Create New Invoice / Bill
             </h2>
-            <form onSubmit={handleCreateBill} className="space-y-4">
-              <div>
-                <label className="label">Vendor</label>
-                <select
-                  required
-                  className="input select"
-                  value={createForm.vendorId}
-                  onChange={(e) =>
-                    setCreateForm({ ...createForm, vendorId: e.target.value })
-                  }
-                >
-                  <option value="">Select Vendor...</option>
-                  {vendors.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="label">Amount (USD)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  required
-                  className="input"
-                  placeholder="0.00"
-                  value={createForm.amount}
-                  onChange={(e) =>
-                    setCreateForm({ ...createForm, amount: e.target.value })
-                  }
-                />
-              </div>
-              <div>
-                <label className="label">Invoice Number</label>
-                <input
-                  type="text"
-                  className="input"
-                  placeholder="INV-2026-XXXX"
-                  value={createForm.invoiceNumber}
-                  onChange={(e) =>
-                    setCreateForm({
-                      ...createForm,
-                      invoiceNumber: e.target.value,
-                    })
-                  }
-                />
-              </div>
-              <div>
-                <label className="label">Due Date</label>
-                <input
-                  type="date"
-                  required
-                  className="input"
-                  value={createForm.dueDate}
-                  onChange={(e) =>
-                    setCreateForm({ ...createForm, dueDate: e.target.value })
-                  }
-                />
-              </div>
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-surface-border">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="btn-secondary"
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="btn-primary">
-                  Create Bill
-                </button>
+            <form onSubmit={handleCreateBill}>
+              <div className="flex gap-6">
+                {/* Left: PDF Upload / Preview */}
+                <div className="w-1/2 min-h-[700px]">
+                  {!filePreview ? (
+                    <label className="flex flex-col items-center justify-center w-full h-full min-h-[700px] rounded-xl border-2 border-dashed border-surface-border bg-surface-hover/30 cursor-pointer hover:border-brand-500/50 transition-colors">
+                      <svg
+                        className="w-10 h-10 text-slate-500 mb-3"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={1.5}
+                          d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                        />
+                      </svg>
+                      <p className="text-sm text-slate-400 font-medium">
+                        Drop PDF here or click to browse
+                      </p>
+                      <p className="text-xs text-slate-600 mt-1">
+                        PDF files up to 10MB
+                      </p>
+                      <input
+                        type="file"
+                        accept=".pdf"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            if (file.size > 10 * 1024 * 1024) {
+                              toast.error("File exceeds 10MB limit");
+                              return;
+                            }
+                            setSelectedFile(file);
+                            setFilePreview(URL.createObjectURL(file));
+                          }
+                        }}
+                      />
+                    </label>
+                  ) : (
+                    <div className="relative w-full min-h-[700px] rounded-xl overflow-hidden border border-surface-border bg-black/20">
+                      <embed
+                        src={filePreview}
+                        type="application/pdf"
+                        className="w-full h-full min-h-[700px]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (filePreview) URL.revokeObjectURL(filePreview);
+                          setSelectedFile(null);
+                          setFilePreview(null);
+                        }}
+                        className="absolute top-2 right-2 px-2.5 py-1 rounded-lg bg-red-600/80 hover:bg-red-600 text-white text-xs font-medium transition-colors"
+                      >
+                        Remove file
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Right: Form */}
+                <div className="w-1/2 space-y-4">
+                  <div>
+                    <label className="label">Vendor</label>
+                    <select
+                      required
+                      className="input select"
+                      value={createForm.vendorId}
+                      onChange={(e) =>
+                        setCreateForm({
+                          ...createForm,
+                          vendorId: e.target.value,
+                        })
+                      }
+                    >
+                      <option value="">Select Vendor...</option>
+                      {vendors.map((v) => (
+                        <option key={v.id} value={v.id}>
+                          {v.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label">Amount (USD)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      required
+                      className="input"
+                      placeholder="0.00"
+                      value={createForm.amount}
+                      onChange={(e) =>
+                        setCreateForm({ ...createForm, amount: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label className="label">Invoice Number</label>
+                    <input
+                      type="text"
+                      className="input"
+                      placeholder="INV-2026-XXXX"
+                      value={createForm.invoiceNumber}
+                      onChange={(e) =>
+                        setCreateForm({
+                          ...createForm,
+                          invoiceNumber: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label className="label">Due Date</label>
+                    <input
+                      type="date"
+                      required
+                      className="input"
+                      value={createForm.dueDate}
+                      onChange={(e) =>
+                        setCreateForm({
+                          ...createForm,
+                          dueDate: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="flex items-center justify-end gap-3 pt-4 border-t border-surface-border">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (filePreview) URL.revokeObjectURL(filePreview);
+                        setSelectedFile(null);
+                        setFilePreview(null);
+                        setShowCreateModal(false);
+                      }}
+                      className="btn-secondary"
+                    >
+                      Cancel
+                    </button>
+                    <button type="submit" className="btn-primary">
+                      Create Bill
+                    </button>
+                  </div>
+                </div>
               </div>
             </form>
           </div>

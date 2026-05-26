@@ -31,6 +31,7 @@ export interface Bill {
   invoiceNumber: string | null
   dueDate: string
   status: 'Draft' | 'Pending Approval' | 'Approved' | 'Overdue' | 'Rejected' | 'Cancelled' | 'Paid'
+  fileUrl: string | null
   vendor?: Vendor
   creator?: { id: string; fullName: string; email: string }
   approver?: { id: string; fullName: string; email: string } | null
@@ -75,9 +76,21 @@ export const fetchBillById = createAsyncThunk(
 
 export const createBill = createAsyncThunk(
   'bills/create',
-  async (payload: { vendorId: string; amount: number; invoiceNumber?: string; dueDate: string }, { rejectWithValue }) => {
+  async (payload: { vendorId: string; amount: number; invoiceNumber?: string; dueDate: string; file?: File }, { rejectWithValue }) => {
     try {
-      const { data } = await api.post('/bills', payload)
+      let body
+      if (payload.file) {
+        const formData = new FormData()
+        formData.append('vendorId', payload.vendorId)
+        formData.append('amount', String(payload.amount))
+        if (payload.invoiceNumber) formData.append('invoiceNumber', payload.invoiceNumber)
+        formData.append('dueDate', payload.dueDate)
+        formData.append('file', payload.file)
+        body = formData
+      } else {
+        body = payload
+      }
+      const { data } = await api.post('/bills', body)
       return data.data as Bill
     } catch (err: unknown) {
       return rejectWithValue(isAxiosError(err) ? err.response?.data?.message || 'Failed to create bill' : 'Failed to create bill')
