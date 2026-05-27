@@ -1,90 +1,119 @@
-import React from 'react'
-import { useAppDispatch, useAppSelector } from '../hooks/redux'
-import { setDeveloperRole } from '../store/slices/authSlice'
+import React, { useState } from "react";
+import toast from "react-hot-toast";
+import type { Section } from "../components/settings/types";
+import SettingsSidebar from "../components/settings/SettingsSidebar";
+import CompanySection from "../components/settings/CompanySection";
+import ApprovalRulesSection from "../components/settings/ApprovalRulesSection";
+import PaymentSettingsSection from "../components/settings/PaymentSettingsSection";
+import NotificationsSection from "../components/settings/NotificationsSection";
+import IntegrationsSection from "../components/settings/IntegrationsSection";
+import SecuritySection from "../components/settings/SecuritySection";
+import AppearanceSection from "../components/settings/AppearanceSection";
+
+const sections: { id: Section; icon: React.ReactNode }[] = [
+  {
+    id: "Company",
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+      </svg>
+    ),
+  },
+  {
+    id: "Approval Rules",
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    ),
+  },
+  {
+    id: "Payment Settings",
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+      </svg>
+    ),
+  },
+  {
+    id: "Notifications",
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+      </svg>
+    ),
+  },
+  {
+    id: "Integrations",
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z" />
+      </svg>
+    ),
+  },
+  {
+    id: "Security",
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+      </svg>
+    ),
+  },
+  {
+    id: "Appearance",
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+      </svg>
+    ),
+  },
+];
+
+const sectionComponents: Record<Section, React.FC> = {
+  Company: CompanySection,
+  "Approval Rules": ApprovalRulesSection,
+  "Payment Settings": PaymentSettingsSection,
+  Notifications: NotificationsSection,
+  Integrations: IntegrationsSection,
+  Security: SecuritySection,
+  Appearance: AppearanceSection,
+};
 
 const SettingsPage: React.FC = () => {
-  const dispatch = useAppDispatch()
-  const user = useAppSelector((s) => s.auth.user)
+  const [activeSection, setActiveSection] = useState<Section>("Company");
+  const SectionComponent = sectionComponents[activeSection];
 
-  const handleRoleOverride = (role: 'Admin' | 'Approver' | 'Submitter') => {
-    dispatch(setDeveloperRole(role))
-  }
+  const handleSave = () => {
+    toast.success("Changes saved successfully");
+  };
 
   return (
-    <div className="space-y-6 max-w-2xl">
-      {/* Header */}
+    <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white">System Settings</h1>
-        <p className="text-slate-400 text-sm mt-0.5">Manage system properties, preferences, and developer tools</p>
-      </div>
-
-      {/* Developer Settings Card */}
-      <div className="card space-y-4 border border-brand-500/20 bg-brand-950/10">
-        <div className="flex items-center gap-2">
-          <div className="p-1 rounded bg-brand-500/20 text-brand-400">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-            </svg>
-          </div>
-          <h3 className="text-lg font-semibold text-white">Developer Testing Tools</h3>
-        </div>
-        <p className="text-sm text-slate-300">
-          Toggle your system role on-the-fly to preview layout access and permissions. No logout required.
+        <h1 className="text-2xl font-bold text-white">Settings</h1>
+        <p className="text-slate-400 text-sm mt-0.5">
+          Manage your company preferences and account configuration
         </p>
-        
-        {user ? (
-          <div className="space-y-3 pt-2">
-            <label className="label">Active User Role</label>
-            <div className="flex gap-2">
-              {(['Submitter', 'Approver', 'Admin'] as const).map((role) => (
-                <button
-                  key={role}
-                  onClick={() => handleRoleOverride(role)}
-                  className={`flex-1 py-2 px-4 rounded-lg font-medium border transition-all duration-200 text-sm ${
-                    user.role === role
-                      ? 'bg-brand-600 border-brand-500 text-white shadow-lg shadow-brand-600/20'
-                      : 'bg-surface border-surface-border text-slate-400 hover:text-white hover:bg-surface-hover'
-                  }`}
-                >
-                  {role}
-                </button>
-              ))}
-            </div>
-            <p className="text-xs text-slate-500">
-              * Note: Role overrides apply locally for navigation and action authorization.
-            </p>
-          </div>
-        ) : (
-          <p className="text-sm text-red-400">Please sign in to configure role overrides.</p>
-        )}
       </div>
 
-      {/* System Settings (Mocked) */}
-      <div className="card space-y-6">
-        <h3 className="text-lg font-semibold text-white">General Settings</h3>
-        <div className="space-y-4 divide-y divide-surface-border">
-          <div className="flex items-center justify-between pt-1">
-            <div>
-              <p className="text-sm font-semibold text-white">Dark Mode Theme</p>
-              <p className="text-xs text-slate-500">Use high-contrast theme across application views</p>
-            </div>
-            <div className="w-11 h-6 bg-brand-600 rounded-full flex items-center justify-end px-1 cursor-pointer">
-              <div className="w-4 h-4 bg-white rounded-full" />
-            </div>
-          </div>
-          <div className="flex items-center justify-between pt-4">
-            <div>
-              <p className="text-sm font-semibold text-white">Email Notifications</p>
-              <p className="text-xs text-slate-500">Alert creators/approvers upon approval state transitions</p>
-            </div>
-            <div className="w-11 h-6 bg-slate-800 rounded-full flex items-center justify-start px-1 cursor-pointer">
-              <div className="w-4 h-4 bg-slate-600 rounded-full" />
-            </div>
+      <div className="flex gap-6">
+        <SettingsSidebar
+          sections={sections}
+          activeSection={activeSection}
+          onSelect={setActiveSection}
+        />
+
+        <div className="flex-1 card space-y-6">
+          <SectionComponent />
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-surface-border">
+            <button onClick={handleSave} className="btn-primary">
+              Save Changes
+            </button>
           </div>
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default SettingsPage
+export default SettingsPage;
