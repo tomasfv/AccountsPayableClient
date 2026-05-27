@@ -11,6 +11,7 @@ import {
   deleteBill,
   schedulePayment,
   reschedulePayment,
+  cancelPayment,
   executePayment,
 } from "../store/slices/billsSlice";
 import type { Bill } from "../store/slices/billsSlice";
@@ -66,7 +67,12 @@ function getActions(
         case "Scheduled":
           return {
             primary: "PAY_NOW",
-            secondary: ["RESCHEDULE", "CANCEL_PAYMENT", "VIEW_DETAILS", "DOWNLOAD_PDF"],
+            secondary: [
+              "RESCHEDULE",
+              "CANCEL_PAYMENT",
+              "VIEW_DETAILS",
+              "DOWNLOAD_PDF",
+            ],
           };
         case "Processing":
           return {
@@ -88,17 +94,22 @@ function getActions(
             secondary: ["VIEW_PAYMENT_HISTORY", "VIEW_DETAILS", "DOWNLOAD_PDF"],
           };
         default:
-          return { primary: null, secondary: ["VIEW_DETAILS", "DOWNLOAD_PDF"] };
+          return { primary: "VIEW_DETAILS", secondary: ["DOWNLOAD_PDF"] };
       }
     case "Paid":
       return {
-        primary: "VIEW_RECEIPT",
-        secondary: ["DOWNLOAD_RECEIPT", "DUPLICATE_BILL", "VIEW_DETAILS", "DOWNLOAD_PDF"],
+        primary: "VIEW_DETAILS",
+        secondary: ["DOWNLOAD_PDF"],
       };
     case "Overdue":
       return {
         primary: "RESOLVE_PAYMENT",
-        secondary: ["PAY_NOW", "CONTACT_VENDOR", "VIEW_DETAILS", "DOWNLOAD_PDF"],
+        secondary: [
+          "PAY_NOW",
+          "CONTACT_VENDOR",
+          "VIEW_DETAILS",
+          "DOWNLOAD_PDF",
+        ],
       };
     case "Rejected":
       return {
@@ -106,7 +117,10 @@ function getActions(
         secondary: ["DELETE", "VIEW_DETAILS", "DOWNLOAD_PDF"],
       };
     case "Cancelled":
-      return { primary: "DUPLICATE_BILL", secondary: ["VIEW_DETAILS", "DOWNLOAD_PDF"] };
+      return {
+        primary: "VIEW_DETAILS",
+        secondary: ["DOWNLOAD_PDF"],
+      };
     default:
       return { primary: null, secondary: ["VIEW_DETAILS"] };
   }
@@ -203,6 +217,7 @@ const BillsPage: React.FC = () => {
       month: "short",
       day: "numeric",
       year: "numeric",
+      timeZone: "UTC",
     });
   };
 
@@ -456,7 +471,20 @@ const BillsPage: React.FC = () => {
         setRescheduleForm({ paymentMethod: "ACH", scheduledDate: "" });
         setShowRescheduleModal(true);
         break;
-      case "CANCEL_PAYMENT":
+      case "CANCEL_PAYMENT": {
+        const confirmed = await confirmToast(
+          "Are you sure you want to cancel the scheduled payment?",
+        );
+        if (!confirmed) break;
+        const result = await dispatch(cancelPayment(billId));
+        if (cancelPayment.fulfilled.match(result)) {
+          toast.success("Payment cancelled");
+          await dispatch(fetchBills());
+        } else {
+          toast.error((result.payload as string) || "Failed to cancel payment");
+        }
+        break;
+      }
       case "CONTACT_VENDOR":
       case "DOWNLOAD_RECEIPT":
       case "DUPLICATE_BILL":
@@ -1354,6 +1382,67 @@ const BillsPage: React.FC = () => {
                     </p>
                   </div>
                 )}
+
+                {/* Payment Details */}
+                {selectedDetailBill.payments &&
+                  selectedDetailBill.payments.length > 0 && (
+                    <div className="pt-4 border-t border-surface-border space-y-4">
+                      <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wide">
+                        Payment Details
+                      </h3>
+                      {(() => {
+                        const p =
+                          selectedDetailBill.payments![
+                            selectedDetailBill.payments!.length - 1
+                          ];
+                        return (
+                          <>
+                            <div>
+                              <label className="label">Payment Status</label>
+                              <span
+                                className={`badge ${paymentStatusColors[p.status] ?? ""}`}
+                              >
+                                {p.status}
+                              </span>
+                            </div>
+                            <div>
+                              <label className="label">Payment Method</label>
+                              <p className="text-sm text-white font-medium">
+                                {p.paymentMethod}
+                              </p>
+                            </div>
+                            <div>
+                              <label className="label">Scheduled Date</label>
+                              <p className="text-sm text-white font-medium">
+                                {formatDate(p.scheduledDate)}
+                              </p>
+                            </div>
+                            {p.status === "Paid" && (
+                              <>
+                                <div>
+                                  <label className="label">Paid Date</label>
+                                  <p className="text-sm text-white font-medium">
+                                    {formatDate(p.paidDate!)}
+                                  </p>
+                                </div>
+                                {p.transactionReference && (
+                                  <div>
+                                    <label className="label">
+                                      Transaction Reference
+                                    </label>
+                                    <p className="text-sm text-white font-medium font-mono">
+                                      {p.transactionReference}
+                                    </p>
+                                  </div>
+                                )}
+                              </>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </div>
+                  )}
+
                 <div className="flex items-center justify-end gap-3 pt-4 border-t border-surface-border">
                   <button
                     type="button"
