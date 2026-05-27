@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { useAppDispatch } from "../../hooks/redux";
+import { useAppDispatch, useAppSelector } from "../../hooks/redux";
 import { schedulePayment, fetchBills } from "../../store/slices/billsSlice";
+import { fetchCards } from "../../store/slices/cardsSlice";
 
 interface Props {
   open: boolean;
@@ -17,6 +18,7 @@ const SchedulePaymentModal: React.FC<Props> = ({
   onClose,
 }) => {
   const dispatch = useAppDispatch();
+  const cards = useAppSelector((s) => s.cards.items);
   const [form, setForm] = useState({
     paymentMethod: "ACH" as "ACH" | "Paper Check" | "Card",
     scheduledDate: dueDate
@@ -24,10 +26,22 @@ const SchedulePaymentModal: React.FC<Props> = ({
       : "",
   });
 
+  useEffect(() => {
+    if (open) dispatch(fetchCards());
+  }, [open, dispatch]);
+
   if (!open) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (form.paymentMethod === "ACH" && !cards.find((c) => c.type === "Debit")) {
+      toast.error("Please add a Debit Card first in Manage Cards");
+      return;
+    }
+    if (form.paymentMethod === "Card" && !cards.find((c) => c.type === "Credit")) {
+      toast.error("Please add a Credit Card first in Manage Cards");
+      return;
+    }
     const result = await dispatch(
       schedulePayment({
         id: billId,
