@@ -1,16 +1,17 @@
-import React, { useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import { fetchBills } from '../store/slices/billsSlice'
+import ManageCardsModal from '../components/payments/ManageCardsModal'
 
 const PaymentsPage: React.FC = () => {
   const dispatch = useAppDispatch()
   const { items: bills, loading } = useAppSelector((s) => s.bills)
+  const [showCardsModal, setShowCardsModal] = useState(false)
 
   useEffect(() => {
     dispatch(fetchBills())
   }, [dispatch])
 
-  // Extract all payments from bills
   const payments = bills.flatMap((bill) => 
     (bill.payments || []).map((payment) => ({
       ...payment,
@@ -39,9 +40,20 @@ const PaymentsPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-white">Payments</h1>
-        <p className="text-slate-400 text-sm mt-0.5">{payments.length} total payments tracked</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Payments</h1>
+          <p className="text-slate-400 text-sm mt-0.5">{payments.length} total payments tracked</p>
+        </div>
+        <button
+          onClick={() => setShowCardsModal(true)}
+          className="btn-secondary"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+          </svg>
+          Manage Cards
+        </button>
       </div>
 
       {/* Table */}
@@ -92,6 +104,12 @@ const PaymentsPage: React.FC = () => {
           </table>
         )}
       </div>
+
+      {/* Manage Cards Modal */}
+      <ManageCardsModal
+        open={showCardsModal}
+        onClose={() => setShowCardsModal(false)}
+      />
     </div>
   )
 }

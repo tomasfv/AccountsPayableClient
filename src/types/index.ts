@@ -50,3 +50,16 @@ export interface Bill {
   createdAt: string
   updatedAt: string
 }
+
+export interface Card {
+  id: string
+  createdById: string
+  type: 'Debit' | 'Credit'
+  cardholderName: string
+  lastFourDigits: string
+  expiryMonth: string
+  expiryYear: string
+  cvv: string
+  createdAt: string
+  updatedAt: string
+}
