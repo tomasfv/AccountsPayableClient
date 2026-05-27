@@ -122,7 +122,7 @@ function getActions(
         secondary: ["DOWNLOAD_PDF"],
       };
     default:
-      return { primary: null, secondary: ["VIEW_DETAILS"] };
+      return { primary: "VIEW_DETAILS", secondary: ["DOWNLOAD_PDF"] };
   }
 }
 
@@ -689,61 +689,61 @@ const BillsPage: React.FC = () => {
                               return true;
                             };
 
+                            const effectivePrimary: BillAction =
+                              actions.primary && canApproveAction(actions.primary)
+                                ? actions.primary
+                                : "VIEW_DETAILS";
+
                             return (
                               <>
-                                {actions.primary &&
-                                  canApproveAction(actions.primary) && (
-                                    <button
-                                      id={`action-${actions.primary.toLowerCase()}-${bill.id}`}
-                                      onClick={() => {
-                                        switch (actions.primary) {
-                                          case "APPROVE":
-                                            handleApprove(bill.id);
-                                            break;
-                                          case "SCHEDULE":
-                                            handleOpenSchedule(
-                                              bill.id,
-                                              bill.dueDate,
-                                            );
-                                            break;
-                                          case "PAY_NOW":
-                                          case "RESOLVE_PAYMENT":
-                                            handleExecutePayment(bill.id);
-                                            break;
-                                          case "VIEW_RECEIPT":
-                                            handleNotImplemented();
-                                            break;
-                                          case "EDIT_RESUBMIT":
-                                            handleOpenEdit(bill);
-                                            break;
-                                          default:
-                                            if (actions.primary) {
-                                              handleSecondaryAction(
-                                                bill.id,
-                                                actions.primary,
-                                                bill,
-                                              );
-                                            }
-                                        }
-                                      }}
-                                      className={`btn-secondary !px-2.5 !py-1 !text-xs cursor-pointer ${
-                                        actions.primary === "APPROVE"
-                                          ? "!bg-yellow-600/10 !text-yellow-400 hover:!bg-yellow-600/20"
-                                          : actions.primary === "SCHEDULE"
-                                            ? "!bg-purple-600/10 !text-purple-400 hover:!bg-purple-600/20"
-                                            : actions.primary === "PAY_NOW" ||
-                                                actions.primary ===
-                                                  "RESOLVE_PAYMENT"
-                                              ? "!bg-green-600/10 !text-green-400 hover:!bg-green-600/20"
-                                              : actions.primary ===
-                                                  "EDIT_RESUBMIT"
-                                                ? "!bg-blue-600/10 !text-blue-400 hover:!bg-blue-600/20"
-                                                : "!bg-brand-600/10 !text-brand-400 hover:!bg-brand-600/20"
-                                      }`}
-                                    >
-                                      {actionLabel[actions.primary]}
-                                    </button>
-                                  )}
+                                <button
+                                  id={`action-${effectivePrimary.toLowerCase()}-${bill.id}`}
+                                  onClick={() => {
+                                    switch (effectivePrimary) {
+                                      case "APPROVE":
+                                        handleApprove(bill.id);
+                                        break;
+                                      case "SCHEDULE":
+                                        handleOpenSchedule(
+                                          bill.id,
+                                          bill.dueDate,
+                                        );
+                                        break;
+                                      case "PAY_NOW":
+                                      case "RESOLVE_PAYMENT":
+                                        handleExecutePayment(bill.id);
+                                        break;
+                                      case "VIEW_RECEIPT":
+                                        handleNotImplemented();
+                                        break;
+                                      case "EDIT_RESUBMIT":
+                                        handleOpenEdit(bill);
+                                        break;
+                                      default:
+                                        handleSecondaryAction(
+                                          bill.id,
+                                          effectivePrimary,
+                                          bill,
+                                        );
+                                    }
+                                  }}
+                                  className={`btn-secondary !px-2.5 !py-1 !text-xs cursor-pointer ${
+                                    effectivePrimary === "APPROVE"
+                                      ? "!bg-yellow-600/10 !text-yellow-400 hover:!bg-yellow-600/20"
+                                      : effectivePrimary === "SCHEDULE"
+                                        ? "!bg-purple-600/10 !text-purple-400 hover:!bg-purple-600/20"
+                                        : effectivePrimary === "PAY_NOW" ||
+                                            effectivePrimary ===
+                                              "RESOLVE_PAYMENT"
+                                          ? "!bg-green-600/10 !text-green-400 hover:!bg-green-600/20"
+                                          : effectivePrimary ===
+                                              "EDIT_RESUBMIT"
+                                            ? "!bg-blue-600/10 !text-blue-400 hover:!bg-blue-600/20"
+                                            : "!bg-brand-600/10 !text-brand-400 hover:!bg-brand-600/20"
+                                  }`}
+                                >
+                                  {actionLabel[effectivePrimary]}
+                                </button>
 
                                 {actions.secondary.length > 0 && (
                                   <div className="relative">
