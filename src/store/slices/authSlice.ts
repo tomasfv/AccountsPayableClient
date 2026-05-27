@@ -1,16 +1,7 @@
 import { createSlice, createAsyncThunk, type PayloadAction } from '@reduxjs/toolkit'
 import { isAxiosError } from 'axios'
 import api from '../../services/api'
-
-// --- Types ---
-export interface User {
-  id: string
-  email: string
-  fullName: string
-  role: 'Admin' | 'Approver' | 'Submitter'
-  createdAt: string
-  updatedAt: string
-}
+import type { User } from '../../types'
 
 interface AuthState {
   user: User | null

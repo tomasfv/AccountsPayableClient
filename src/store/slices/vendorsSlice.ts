@@ -1,20 +1,7 @@
 import { createSlice, createAsyncThunk, type PayloadAction } from '@reduxjs/toolkit'
 import { isAxiosError } from 'axios'
 import api from '../../services/api'
-
-// --- Types ---
-export interface Vendor {
-  id: string
-  name: string
-  email: string
-  phone: string | null
-  bankName: string | null
-  bankRoutingNumber: string | null
-  bankAccountNumber: string | null
-  status: 'Active' | 'Inactive'
-  createdAt: string
-  updatedAt: string
-}
+import type { Vendor } from '../../types'
 
 interface VendorsState {
   items: Vendor[]

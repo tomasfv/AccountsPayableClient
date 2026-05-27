@@ -10,7 +10,7 @@ import {
   cancelPayment,
   executePayment,
 } from "../store/slices/billsSlice";
-import type { Bill } from "../store/slices/billsSlice";
+import type { Bill } from "../types";
 import { fetchVendors } from "../store/slices/vendorsSlice";
 import type { BillAction } from "../utils/billActions";
 import BillsTableRow from "../components/bills/BillsTableRow";

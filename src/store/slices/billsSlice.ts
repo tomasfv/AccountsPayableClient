@@ -1,44 +1,7 @@
 import { createSlice, createAsyncThunk, type PayloadAction } from '@reduxjs/toolkit'
 import { isAxiosError } from 'axios'
 import api from '../../services/api'
-
-// --- Types ---
-export interface Payment {
-  id: string
-  billId: string
-  paymentMethod: 'ACH' | 'Paper Check' | 'Card'
-  amount: number
-  scheduledDate: string
-  paidDate: string | null
-  status: 'Not Scheduled' | 'Scheduled' | 'Processing' | 'Paid' | 'Failed' | 'Cancelled' | 'Refunded'
-  transactionReference: string | null
-  createdAt: string
-  updatedAt: string
-}
-
-export interface Vendor {
-  id: string
-  name: string
-  email: string
-}
-
-export interface Bill {
-  id: string
-  vendorId: string
-  createdById: string
-  approvedById: string | null
-  amount: number
-  invoiceNumber: string | null
-  dueDate: string
-  status: 'Draft' | 'Pending Approval' | 'Approved' | 'Overdue' | 'Rejected' | 'Cancelled' | 'Paid'
-  fileUrl: string | null
-  vendor?: Vendor
-  creator?: { id: string; fullName: string; email: string }
-  approver?: { id: string; fullName: string; email: string } | null
-  payments?: Payment[]
-  createdAt: string
-  updatedAt: string
-}
+import type { Bill, Payment } from '../../types'
 
 interface BillsState {
   items: Bill[]

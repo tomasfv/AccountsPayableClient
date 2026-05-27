@@ -1,5 +1,5 @@
 import React from "react";
-import type { Bill } from "../../store/slices/billsSlice";
+import type { Bill } from "../../types";
 import { formatDate, formatCurrency } from "../../utils/format";
 import { statusColors, paymentStatusColors } from "../../utils/billActions";
 

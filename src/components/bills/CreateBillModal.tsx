@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import toast from "react-hot-toast";
 import { useAppDispatch } from "../../hooks/redux";
 import { createBill, fetchBills } from "../../store/slices/billsSlice";
-import type { Vendor } from "../../store/slices/billsSlice";
+import type { Vendor } from "../../types";
 
 interface Props {
   open: boolean;
