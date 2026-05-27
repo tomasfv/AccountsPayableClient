@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk, type PayloadAction } from '@reduxjs/toolkit'
 import { isAxiosError } from 'axios'
 import api from '../../services/api'
-import type { Bill, Payment } from '../../types'
+import type { Bill } from '../../types'
 
 interface BillsState {
   items: Bill[]
