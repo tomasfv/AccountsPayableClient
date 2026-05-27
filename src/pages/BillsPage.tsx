@@ -526,9 +526,15 @@ const BillsPage: React.FC = () => {
     currentUser?.role === "Admin" || currentUser?.role === "Approver";
   const canPay = currentUser?.role === "Admin";
 
-  const filteredBills = bills.filter(
-    (b) => statusFilter === "All" || b.status === statusFilter,
-  );
+  const filteredBills = bills.filter((b) => {
+    if (statusFilter === "All") return true;
+    if (statusFilter === "Overdue") {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return new Date(b.dueDate + "T00:00:00") < today;
+    }
+    return b.status === statusFilter;
+  });
 
   return (
     <div className="space-y-6">
@@ -566,12 +572,10 @@ const BillsPage: React.FC = () => {
       <div className="flex items-center gap-2 border-b border-surface-border pb-4">
         {[
           "All",
-          "Draft",
           "Pending Approval",
           "Approved",
           "Overdue",
           "Rejected",
-          "Cancelled",
           "Paid",
         ].map((f) => (
           <button
@@ -618,7 +622,7 @@ const BillsPage: React.FC = () => {
               {filteredBills.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="text-center py-16 text-slate-500">
-                    No bills found. Create your first bill.
+                    No bills found.
                   </td>
                 </tr>
               ) : (
