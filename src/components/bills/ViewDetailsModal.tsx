@@ -12,6 +12,11 @@ interface Props {
 const ViewDetailsModal: React.FC<Props> = ({ open, bill, onClose }) => {
   if (!open) return null;
 
+  const backendOrigin = (import.meta.env.VITE_API_URL || '').replace(/\/api$/, '')
+  const pdfUrl = bill.fileUrl?.startsWith('http')
+    ? bill.fileUrl
+    : `${backendOrigin}${bill.fileUrl || ''}`
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
       <div className="card w-full max-w-7xl relative border border-surface-border shadow-2xl">
@@ -20,7 +25,7 @@ const ViewDetailsModal: React.FC<Props> = ({ open, bill, onClose }) => {
           <div className="w-1/2 min-h-[700px] rounded-xl overflow-hidden border border-surface-border bg-black/20">
             {bill.fileUrl ? (
               <embed
-                src={bill.fileUrl}
+                src={pdfUrl}
                 type="application/pdf"
                 className="w-full h-full min-h-[700px]"
               />
