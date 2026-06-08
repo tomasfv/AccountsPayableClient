@@ -14,6 +14,7 @@ import PaymentsPage from './pages/PaymentsPage'
 import ReportsPage from './pages/ReportsPage'
 import SettingsPage from './pages/SettingsPage'
 import ProfilePage from './pages/ProfilePage'
+import AiAssistantPage from './pages/AiAssistantPage'
 
 const App: React.FC = () => {
   const dispatch = useAppDispatch()
@@ -42,6 +43,7 @@ const App: React.FC = () => {
             <Route path="/users" element={<UsersPage />} />
             <Route path="/payments" element={<PaymentsPage />} />
             <Route path="/reports" element={<ReportsPage />} />
+            <Route path="/ai-assistant" element={<AiAssistantPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/profile" element={<ProfilePage />} />
           </Route>
